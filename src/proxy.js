@@ -170,22 +170,26 @@ module.exports = function proxyPolyfill() {
       this[prop] = value;
     };
 
-    // Clone direct properties (i.e., not part of a prototype).
-    const propertyNames = $Object.getOwnPropertyNames(target);
     const propertyMap = {};
-    propertyNames.forEach(function(prop) {
-      if ((isMethod || isArray) && prop in proxy) {
-        return;  // ignore properties already here, e.g. 'bind', 'prototype' etc
-      }
-      const real = $Object.getOwnPropertyDescriptor(target, prop);
-      const desc = {
-        enumerable: Boolean(real.enumerable),
-        get: getter.bind(target, prop),
-        set: setter.bind(target, prop),
-      };
-      $Object.defineProperty(proxy, prop, desc);
-      propertyMap[prop] = true;
-    });
+    // Clone direct properties (i.e., not part of a prototype).
+    const cloneDirectProperties = object => {
+        const propertyNames = $Object.getOwnPropertyNames(object);
+
+        propertyNames.forEach(function(prop) {
+          if ((isMethod || isArray) && prop in proxy) {
+            return;  // ignore properties already here, e.g. 'bind', 'prototype' etc
+          }
+          const real = $Object.getOwnPropertyDescriptor(object, prop);
+          const desc = {
+            enumerable: Boolean(real.enumerable),
+            get: getter.bind(target, prop),
+            set: setter.bind(target, prop),
+          };
+          $Object.defineProperty(proxy, prop, desc);
+          propertyMap[prop] = true;
+        });
+    };
+    cloneDirectProperties(target);
 
     // Set the prototype, or clone all prototype methods (always required if a getter is provided).
     // TODO(samthor): We don't allow prototype methods to be set. It's (even more) awkward.
@@ -209,12 +213,11 @@ module.exports = function proxyPolyfill() {
       }
     }
     if (handler.get || !prototypeOk) {
-      for (let k in target) {
-        if (propertyMap[k]) {
-          continue;
+        let prototype = $Object.getPrototypeOf(target);
+        while (prototype && !prototype.isPrototypeOf($Object)) {
+            cloneDirectProperties(prototype);
+            prototype = $Object.getPrototypeOf(prototype);
         }
-        $Object.defineProperty(proxy, k, { get: getter.bind(target, k) });
-      }
     }
 
     // The Proxy polyfill cannot handle adding new properties. Seal the target and proxy.
