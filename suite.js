@@ -270,6 +270,59 @@ module.exports = () => function(scope) {
         assert.sameMembers(called, ['foo'], 'should be called with "foo"');
       });
 
+      test('proxy class with getter', function() {
+        class Test {
+          get id() { return 'id' };
+        }
+
+        const test = new Test();
+        assert.equal(test.id, 'id');
+
+        const proxy = new impl(test, {
+          get(target, property) {
+            return target[property] + '_proxied';
+          },
+        });
+        assert.equal(proxy.id, 'id_proxied');
+      });
+
+      test('proxy class with getter in superclass', function() {
+        class Base {
+          get id() { return 'id' };
+        }
+        class Test extends Base {
+        }
+
+        const test = new Test();
+        assert.equal(test.id, 'id');
+
+        const proxy = new impl(test, {
+          get(target, property) {
+            return target[property] + '_proxied';
+          },
+        });
+        assert.equal(proxy.id, 'id_proxied');
+      });
+
+      test('proxy class with getter in superclass overridden', function() {
+        class Base {
+          get id() { return 'base_id' };
+        }
+        class Test extends Base {
+          get id() { return 'id' };
+        }
+
+        const test = new Test();
+        assert.equal(test.id, 'id');
+
+        const proxy = new impl(test, {
+          get(target, property) {
+            return target[property] + '_proxied';
+          },
+        });
+        assert.equal(proxy.id, 'id_proxied');
+      });
+
       test('trap instance methods', function() {
         var cls = function() {
           this.y = 1;

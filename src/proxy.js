@@ -180,6 +180,10 @@ module.exports = function proxyPolyfill() {
             return;  // ignore properties already here, e.g. 'bind', 'prototype' etc
           }
           const real = $Object.getOwnPropertyDescriptor(object, prop);
+          if (propertyMap[prop]) {
+            // Already handled, so skip
+            return;
+          }
           const desc = {
             enumerable: Boolean(real.enumerable),
             get: getter.bind(target, prop),
@@ -215,6 +219,7 @@ module.exports = function proxyPolyfill() {
     if (handler.get || !prototypeOk) {
         let prototype = $Object.getPrototypeOf(target);
         while (prototype && !prototype.isPrototypeOf($Object)) {
+
             cloneDirectProperties(prototype);
             prototype = $Object.getPrototypeOf(prototype);
         }
